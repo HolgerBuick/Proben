@@ -3,52 +3,50 @@
 <!DOCTYPE html>
 <html lang="de">
 <meta charset="UTF-8">
-<title>MyMaps</title>
+<title>Proben Karten</title>
 
 <script type="text/javascript" src="https://map.nrw/v200/init.js"></script>
 <style>
-.container {
+.main-container {
   display: flex;
   flex-direction: row;
   justify-content: space-between;
 }
-
 .map-container {
   flex: 1;
 }
-
 .text-container {
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
 }
-
 button {
   margin-bottom: 1em;
 } 
 </style>
 <body>
 
-<div class="container">
+<div class="main-container">
   <div class="map-container">
     <div id="itnrwMap_0"
       class="itnrwMap map"
       data-itnrw-map="width:100%, height:100vh, basemap:topplus_open"
       data-itnrw-module-toggler="topplus_open, dop"
       data-itnrw-module-tools="alle"
-	  data-itnrw-geometries="[linestring; 319048.1, 5680971.9; 332271.7, 5678143.7; 333800.5, 5688424.5]"
+	    data-itnrw-geometries="[linestring; 319048.1, 5680971.9; 332271.7, 5678143.7; 333800.5, 5688424.5]"
       data-itnrw-callbacks="ausschnittRechteck:mapsDataRectChanged(), setzeKoordinate:mapsDataPointChanged(), zeichneFreihandPolygon:mapsDataFreePolygonChanged"
      ></div>
   </div>
-  <div id="userInterfaceContainer" class="text-container">
 
+  <div id="userInterfaceContainer" class="text-container">
     <button onclick="pointsFromInputToMap();">Werte in Karte übertragen</button>
     <div>Eingabe</div>
     <textarea id="inputTextArea"  style="width: 20em; height: 30em;"></textarea>
-	<div>Ausgabe</div>
+	  <div>Ausgabe</div>
     <textarea id="outputTextArea" oninput="pointsFromOutputToMap()" style="width: 20em; height: 30em;"></textarea>
   </div>
+
   <div class="map-container">
     <div id="itnrwMap_1"
       class="itnrwMap map"
@@ -62,87 +60,79 @@ button {
 
 <script>
 
-
 function filterArray(arrayPoints, arrayRect) {
 
-    const xFirstCoord = arrayRect.features[0].bbox[0];
-    const yFirstCoord = arrayRect.features[0].bbox[1];
-    const xSecondCoord = arrayRect.features[0].bbox[2];
-    const ySecondCoord = arrayRect.features[0].bbox[3];
+  const xFirstCoord = arrayRect.features[0].bbox[0];
+  const yFirstCoord = arrayRect.features[0].bbox[1];
+  const xSecondCoord = arrayRect.features[0].bbox[2];
+  const ySecondCoord = arrayRect.features[0].bbox[3];
 
-    const xMinCoord = Math.min(xFirstCoord, xSecondCoord);
-    const xMaxCoord = Math.max(xFirstCoord, xSecondCoord);
-    const yMinCoord = Math.min(yFirstCoord, ySecondCoord);
-    const yMaxCoord = Math.max(yFirstCoord, ySecondCoord);
+  const xMinCoord = Math.min(xFirstCoord, xSecondCoord);
+  const xMaxCoord = Math.max(xFirstCoord, xSecondCoord);
+  const yMinCoord = Math.min(yFirstCoord, ySecondCoord);
+  const yMaxCoord = Math.max(yFirstCoord, ySecondCoord);
 
-    const filteredArray = arrayPoints.filter((set) => {
-        const xCoord = set[0];
-        const yCoord = set[1];
-        const isXCoordValid = xCoord >= xMinCoord && xCoord <= xMaxCoord;
-        const isYCoordValid = yCoord >= yMinCoord && yCoord <= yMaxCoord;
-        return isXCoordValid && isYCoordValid;
-    });
+  const filteredArray = arrayPoints.filter((set) => {
+    const xCoord = set[0];
+    const yCoord = set[1];
+    const isXCoordValid = xCoord >= xMinCoord && xCoord <= xMaxCoord;
+    const isYCoordValid = yCoord >= yMinCoord && yCoord <= yMaxCoord;
+    return isXCoordValid && isYCoordValid;
+  });
 
-    return filteredArray;
+  return filteredArray;
 }
 
 function getCoordinatesFromMap() {
-    const divElement = document.getElementById("itnrwMap_0");
-    const coordsString = divElement.getAttribute("data-itnrw-coords");
+  const divElement = document.getElementById("itnrwMap_0");
+  const coordsString = divElement.getAttribute("data-itnrw-coords");
+  const regex = /\[(.*?)\]/g;
+  const coordinates = [];
+  try {
+    let match;
+    while ((match = regex.exec(coordsString)) !== null) {
+      const matchValues = match[1].split(";");
 
-    const regex = /\[(.*?)\]/g;
-    const coordinates = [];
+      const secondValue = matchValues[1].trim().split(",")[0];
+      const thirdValue = matchValues[1].trim().split(",")[1];
 
-    try {
-        let match;
-        while ((match = regex.exec(coordsString)) !== null) {
-            const matchValues = match[1].split(";");
-
-            const secondValue = matchValues[1].trim().split(",")[0];
-            const thirdValue = matchValues[1].trim().split(",")[1];
-
-            const coordinate = [secondValue, thirdValue];
-            coordinates.push(coordinate);
-        }
-    } catch (error) {
-        console.error(error);
-        return undefined;
-    }
-
-    return coordinates;
-
+      const coordinate = [secondValue, thirdValue];
+      coordinates.push(coordinate);
+      }
+  } catch (error) {
+    console.error(error);
+    return undefined;
+  }
+  return coordinates;
 }
 
 function pointsFromInputToMap() {
 	
-	// Beispiel: itnrwMaps[0].set("data-itnrw-coords", "[epsg:25832; 344565.4, 5679410]");
-	
-    coordsStr = document.getElementById("inputTextArea").value;
-    const coordsArr = coordsStr.trim().split('\n').map(line => line.trim());
-    const filteredCoords = coordsArr.filter(coord => coord.startsWith('3'));
-    const formattedCoords = filteredCoords.map(coord => {
-        const[_, x, y] = coord.split(';');
-        return `[epsg:25832; ${x}, ${y}]`;
-    });
-    const coordsParam = formattedCoords.join(',');
-    itnrwMaps[0].set('data-itnrw-coords', coordsParam);
+	// Beispiel: itnrwMaps[0].set("data-itnrw-coords", "[epsg:25832; 344565.4, 5679410]");	
+  coordsStr = document.getElementById("inputTextArea").value;
+  const coordsArr = coordsStr.trim().split('\n').map(line => line.trim());
+  const filteredCoords = coordsArr.filter(coord => coord.startsWith('3'));
+  const formattedCoords = filteredCoords.map(coord => {
+      const[_, x, y] = coord.split(';');
+      return `[epsg:25832; ${x}, ${y}]`;
+  });
+  const coordsParam = formattedCoords.join(',');
+  itnrwMaps[0].set('data-itnrw-coords', coordsParam);
 	
 }
 
 function pointsFromOutputToMap() {
 
-	// Beispiel: itnrwMaps[0].set("data-itnrw-coords", "[epsg:25832; 344565.4, 5679410]");
-	
-    coordsStr = document.getElementById("outputTextArea").value;
-    const coordsArr = coordsStr.trim().split('\n').map(line => line.trim());
-    const filteredCoords = coordsArr;
-    const formattedCoords = filteredCoords.map(coord => {
-        const[ x, y] = coord.split(';');
-        return `[epsg:25832; ${x}, ${y}]`;
-    });
-    const coordsParam = formattedCoords.join(',');
-    itnrwMaps[1].set('data-itnrw-coords', coordsParam);
-		
+	// Beispiel: itnrwMaps[0].set("data-itnrw-coords", "[epsg:25832; 344565.4, 5679410]");	
+  coordsStr = document.getElementById("outputTextArea").value;
+  const coordsArr = coordsStr.trim().split('\n').map(line => line.trim());
+  const filteredCoords = coordsArr;
+  const formattedCoords = filteredCoords.map(coord => {
+      const[ x, y] = coord.split(';');
+      return `[epsg:25832; ${x}, ${y}]`;
+  });
+  const coordsParam = formattedCoords.join(',');
+  itnrwMaps[1].set('data-itnrw-coords', coordsParam);		
 }
 
 function mapsDataFreePolygonChanged(arrayPoints){
@@ -155,21 +145,21 @@ function mapsDataPointChanged(point) {
 	console.log(xCoord + " " + yCoord);
 }
 function mapsDataRectChanged(arrayRect) {
-    let arrayPoints = getCoordinatesFromMap();
-    if (arrayPoints === undefined) {
-        alert("Unkorrekte Koordinaten");
-        return;
-    }
-    let filteredArray = filterArray(arrayPoints, arrayRect)
+  let arrayPoints = getCoordinatesFromMap();
+  if (arrayPoints === undefined) {
+    alert("Unkorrekte Koordinaten");
+    return;
+  }
+  let filteredArray = filterArray(arrayPoints, arrayRect)
 
 
-    let output = "";
-    for (let i = 0; i < filteredArray.length; i++) {
-        for (let j = 0; j < filteredArray[i].length; j++) {
-            output += filteredArray[i][j] + ";";
-        }
-        output += "\n";
+  let output = "";
+  for (let i = 0; i < filteredArray.length; i++) {
+    for (let j = 0; j < filteredArray[i].length; j++) {
+        output += filteredArray[i][j] + ";";
     }
+    output += "\n";
+  }
 	let outputTextArea = document.getElementById("outputTextArea");
 	
 	addCoordsToOuputTextArea(output, outputTextArea);
@@ -189,8 +179,7 @@ function addCoordsToOuputTextArea(coordStr, outputTextArea) {
   if (coordsToAdd.length > 0) {
     outputTextArea.value = [...existingCoords, ...coordsToAdd].join('\n') + '\n';
   }
-  pointsFromOutputToMap();
- 
+  pointsFromOutputToMap(); 
 }
 
 </script>
